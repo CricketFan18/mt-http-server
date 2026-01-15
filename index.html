@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Custom HTTP Server</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 50px; }
+        .btn { color: white; padding: 10px 10px; text-decoration: none; border-radius: 5px; margin: 5px 2px; display: inline-block; font-size: 16px; }
+        .box { border: 1px solid #ddd; padding: 20px; margin: 20px auto; max-width: 400px; }
+    </style>
+</head>
+<body>
+    <h1>Vivek's Custom Server</h1>
+    <p>Running on Multi-Threaded C++ Server</p>
+
+    <div class="box">
+        <h3>System Status</h3>
+        <a href="/cpu" class="btn" style="background: #007bff" >Check CPU Load</a>
+        <a href="/info" class="btn" style="background:#45048b">Information (JSON)</a>
+    </div>
+
+    <div class="box">
+        <h3>Admin Area</h3>
+        <form action="/login" method="POST">
+            <button class="btn" style="background:#35dc46; border:none; cursor:pointer;">Login</button>
+        </form>
+        <a href="/logout" class="btn" style="background:#dc3545; border:none; cursor:pointer;">Logout (If logged in)</a>
+        <br>
+        <a href="/dashboard" style="margin-top: 5px; display: inline-block;" >Go to Dashboard</a>
+    </div>
+</body>
+</html>
