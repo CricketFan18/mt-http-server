@@ -11,7 +11,6 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
-
 #include <vector>
 #include <queue>
 #include <mutex>
@@ -20,6 +19,8 @@
 #include <sys/time.h>
 #include <sstream>
 #include <fstream>
+
+static constexpr int BACKLOG = SOMAXCONN;
 
 struct HttpRequest
 {
@@ -35,9 +36,6 @@ struct HttpResponse
     std::string body;
     std::string extra_headers = "";
 };
-
-static constexpr const char *MYPORT = "8080";
-static constexpr int BACKLOG = 15;
 
 // Global flag to control the loop
 volatile sig_atomic_t server_running = 1; // volatile forces the code to read the value from RAM every single time.
@@ -84,7 +82,9 @@ std::string get_cpu_stats()
         return "Error: Not on Linux";
     std::string line;
     std::getline(f, line);
-    return "<h1>Kernel Load: </h1><h2>" + line + "</h2>";
+    return "<h1>Kernel Load: </h1>"
+           "<h2>" +
+           line + "</h2>";
 }
 
 std::string read_file(const std::string &filepath)
@@ -261,7 +261,14 @@ private:
     std::condition_variable cv_;
     std::vector<std::thread> workers_;
     bool stop_ = false;
-    const size_t max_queue_size_ = 20;
+    const size_t max_queue_size_ = 1000;
+    std::mutex log_mutex;
+
+    void safe_log(const std::string &message) // prevents inter_leaving
+    {
+        std::lock_guard<std::mutex> lock(log_mutex);
+        std::cout << "[Server] " << message << std::endl;
+    }
 
     void handle_client(int client_fd)
     {
@@ -278,7 +285,7 @@ private:
                 break; // Closed or Timeout
 
             HttpRequest req = parse_request(buffer, bytes_read); // Parse
-            // std::cout << "Thread " << std::this_thread::get_id() << " -> " << req.method << " " << req.path << std::endl;
+            safe_log("Thread " + std::to_string(std::hash<std::thread::id>{}(std::this_thread::get_id())) + " handling client");
             HttpResponse res = handle_routing(req);
 
             send_response(client_fd, res);
@@ -286,6 +293,10 @@ private:
         close(client_fd);
     }
 };
+
+//-------------------------------------------//
+//             Socket  Code
+//-------------------------------------------//
 
 static const void *get_ip(const sockaddr *addr)
 {
@@ -315,14 +326,14 @@ static std::string print_ip(sockaddr *addr)
     return std::string(ipstr) + ":" + std::to_string(get_port(addr));
 }
 
-int setup_server()
+int setup_server(const char *port)
 {
     addrinfo hints{}, *res = nullptr, *p;
     hints.ai_family = AF_UNSPEC;
     hints.ai_flags = AI_PASSIVE;
     hints.ai_socktype = SOCK_STREAM;
 
-    int rv = getaddrinfo(nullptr, MYPORT, &hints, &res);
+    int rv = getaddrinfo(nullptr, port, &hints, &res);
     if (rv != 0)
     {
         std::cerr << "gai error: " << gai_strerror(rv) << std::endl;
@@ -371,12 +382,17 @@ int setup_server()
     return sockfd;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+    const char* port = "8080" ;
+    int pool_size = 5;
+    if (argc > 1) port = argv[1];
+    if (argc > 2) pool_size = std::atoi(argv[2]);
+
     signal(SIGPIPE, SIG_IGN); // handle if client disconnects while writing to them, ignore signal if pipe broken
     install_shutdown();
-    WorkerPool pool(5);
-    int listener = setup_server();
+    WorkerPool pool(pool_size);
+    int listener = setup_server(port);
 
     while (server_running)
     {

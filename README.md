@@ -13,6 +13,20 @@ This project implements a **Thread Pool** architecture to handle concurrent clie
 * **Session Management:** Implements basic cookie-based authentication (Login/Logout flows) and secure route protection.
 * **System Monitoring:** Reads directly from the Linux kernel (`/proc/loadavg`) to display real-time CPU load.
 
+## 🚀 Performance Benchmarks
+Tested using wrk on a 6-core Linux environment (WSL 2).
+
+**Command:** `wrk -t6 -c100 -d10s http://localhost:8080/`
+
+| Metric | Result |
+| :--- | :--- |
+| **Requests/sec** | **15,889.44** |
+| **Total Requests** | 159,779 (in 10s) |
+| **Avg Latency** | 356.98 µs |
+| **Errors** | **0** (0.00%) |
+
+*Configuration: 6 Worker Threads, 1000 Queue Size, 128 Backlog.*
+
 ## Tech Stack
 
 * **Language:** C++ (Standard Library)
@@ -41,7 +55,7 @@ g++ main.cpp -o server -pthread
 
 Run the binary. The server will listen on port **8080**.
 ```
-./server
+./server [PORT] [Number of Threads]
 ```
 
 **3. Access**
